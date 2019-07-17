@@ -37,7 +37,7 @@ callbacks_list = [EarlyStopping(monitor='val_loss', patience=5, min_delta=0.01, 
 
 scaler = MinMaxScaler(feature_range=(0,1))
 config = configparser.ConfigParser()
-config.read('lstmconfig.ini')
+config.read('config/lstmconfig.ini')
 
 eco_tools_path = config['SETUP']['eco_tools_path']
 sys.path.append(eco_tools_path)

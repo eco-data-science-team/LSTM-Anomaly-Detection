@@ -9,7 +9,7 @@ from dateutil.relativedelta import relativedelta
 from keras.models import model_from_json
 from sklearn.preprocessing import MinMaxScaler
 config = configparser.ConfigParser()
-config.read('predictorconfig.ini')
+config.read('config/predictorconfig.ini')
 
 eco_tools_path = config['SETUP']['eco_tools_path']
 sys.path.append(eco_tools_path)

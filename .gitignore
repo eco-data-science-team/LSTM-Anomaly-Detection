@@ -7,6 +7,9 @@ __pycache__/
 # C extensions
 *.so
 
+#computer specific config file
+mylstmconfig.ini
+mypredictorconfig.ini
 # Distribution / packaging
 .Python
 build/
