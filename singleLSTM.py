@@ -21,7 +21,7 @@ import matplotlib
 import configparser
 config = configparser.ConfigParser()
 config.read('config/mylstmconfig.ini')
-
+from data_helper import *
 scaler = MinMaxScaler(feature_range=(0,1))
 eco_tools_path = config['SETUP']['eco_tools_path']
 sys.path.append(eco_tools_path)
@@ -52,72 +52,15 @@ print(f"2 hidden layers with {neurons} neurons...")
 fig_name = config['outfiles']['fig_name']
 weight_name = config['outfiles']['weight_name']
 arch_name = config['outfiles']['arch_name']
-
-def create_mulitvariable_df(data):
-    data.rename(columns={'aiTIT4045':'OAT'}, inplace=True)
-
-    data["cdd"] = data.OAT - 65.0
-    data.loc[data.cdd < 0, "cdd"] = 0
-    data["hdd"] = 65.0 - data.OAT
-    data.loc[data.hdd < 0, 'hdd'] = 0
-    data["cdd2"] = data.cdd**2
-    data["hdd2"] = data.hdd**2
-
-    data2 = data.copy()
-    del data
-    month = [str('MONTH_'+ str(x+1)) for x in range(12)]
-    data2["MONTH"]= data2.index.month
-    data2["MONTH"] = data2["MONTH"].astype('category')
-    month_df = pd.get_dummies(data=data2, columns=['MONTH'])
-    
-    month_df = month_df.T.reindex(month).T.fillna(0)
-    month_df = month_df.drop(month_df.columns[0], axis = 1)
-    
-    tod = [str('TOD_' + str(x)) for x in range(24)]
-    data2["TOD"] = data2.index.hour
-    data2["TOD"] = data2["TOD"].astype('category')
-    tod_df = pd.get_dummies(data = data2, columns = ['TOD'])
-    tod_df = tod_df.T.reindex(tod).T.fillna(0)
-    tod_df = tod_df.drop(tod_df.columns[0], axis = 1)
-    
-    dow = [str('DOW_' + str(x)) for x in range(7)]
-    data2["DOW"] = data2.index.weekday
-    data2["DOW"] = data2["DOW"].astype('category')
-    dow_df = pd.get_dummies(data = data2, columns = ['DOW'])
-    dow_df = dow_df.T.reindex(dow).T.fillna(0)
-    dow_df = dow_df.drop(dow_df.columns[0], axis = 1)
-    
-    ### Create Weekend flag
-    data2["WEEKEND"] = 0
-    data2.loc[(dow_df.DOW_5 == 1) | (dow_df.DOW_6 == 1), 'WEEKEND'] = 1
-    
-    data2["shift1"] = data2.iloc[:,0].shift(2)
-
-    data2["rolling24_mean"] = data2.iloc[:,0].rolling('24h').mean()
-    data2["rolling24_max"] = data2.iloc[:,0].rolling('24h').max()
-    data2["rolling24_min"] = data2.iloc[:,0].rolling('24h').min()
-    
-    data2 = pd.concat([data2, month_df, tod_df, dow_df], axis =1)
-
-    data2.dropna(inplace=True)
-    
-    return data2
+show_every = config['outfiles']['show_every']
 
 point_list = [point_name, 'aiTIT4045']
 df = pc.get_stream_by_point(point_list, start = start, end = end, calculation = calculation, interval= interval)
 df = df.dropna(how='any')
 
 
-def clean_train_data(df):
-    #mask1 = (df[point_name] > 2400 )& (df.index.year < 2019)
-    mask1 = (df[point_name] > 2400 )
-    df1 = df.loc[mask1]
-    #mask2 = (df.index.year>=2019)
-    #df2 = df.loc[mask2]
-    return df1
-
-df = clean_train_data(df)
-df = create_mulitvariable_df(df)
+df =  clean_train_data(df, eval_expression=["df.loc[df['GBSF_Electricity_Demand_kBtu'] > 2400]"])
+df = create_standard_multivariable_df(df)
 
 
 def scale_keras(X, y):
@@ -159,12 +102,29 @@ for i in range(n_jobs):
 
 from matplotlib.pyplot import figure
 figure(num=None, figsize=(15, 6), dpi=80, facecolor='w', edgecolor='k')
+
+vertical_lines = [x for x in range(epochs) if x % show_every == 0]
+
 plt.plot(train, color='blue', label='train')
 plt.plot(val, color='orange', label='validation')
-plt.title('model train vs validation loss\n 2 Layers-100 Neurons')
+plt.title(f'LSTM model Train vs Validation loss\n 2 Layers- {neurons} Neurons')
 plt.ylabel('loss (mse)')
 plt.xlabel('epoch')
 plt.legend()
+
+unflat = train.values.tolist()
+unflat1 = val.values.tolist()
+flatten = [ item for sublist in  unflat for item in sublist]
+flatten1 = [ item for sublist in  unflat1 for item in sublist]
+for xc in vertical_lines:
+    plt.axvline(x=xc, color = 'r', linestyle = '--')
+for i,j in zip(train.index, train.values):
+    if i % show_every == 0:
+        plt.annotate(str(j), xy = (i,j ), xytext=(i+1, j+.000200),arrowprops=dict(arrowstyle="->",connectionstyle="arc3"))
+for i,j in zip(val.index, val.values):
+    if i % show_every == 0:
+        plt.annotate(str(j), xy = (i,j ), xytext=(i+1, j+.0010),arrowprops=dict(arrowstyle="->",connectionstyle="arc3"))
+
 plt.savefig(fig_name)
 
 # serialize model to JSON

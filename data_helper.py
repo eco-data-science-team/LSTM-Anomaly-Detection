@@ -86,7 +86,10 @@ def clean_train_data(df, eval_expression = None):
         for exp in eval_expression:
             print(f"Evaluating: {exp}")
             evaluated.append(pd.eval(exp))
-        return tuple(evaluated)
+        if len(eval_expression) > 1 :
+            return tuple(evaluated)
+        else:
+            return evaluated[0]
     else:
         print("No expression passed")
         return df
