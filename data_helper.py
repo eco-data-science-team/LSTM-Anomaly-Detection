@@ -17,16 +17,17 @@ def create_standard_multivariable_df(df, point_location = 0, shift = 1, rename_O
         - Rolling24_max: takes the maximun value of the rolling 24hr
         - Rolling 24_min: takes the minimum value of the rolling 24hr
     """
+    
     if rename_OAT:
         df.rename(columns={'aiTIT4045':'OAT'}, inplace=True)
     start_col = len(df.columns)
     df["CDD"] = df.OAT - 65.0
     df.loc[df.CDD < 0 , "CDD"] = 0
     df["HDD"] = 65.0 - df.OAT
-    df.loc[df.HDD < 0 ] = 0
+    df.loc[df.HDD < 0, "HDD" ] = 0
     df["CDD2"] = df.CDD ** 2
     df["HDD2"] = df.HDD ** 2
-
+    
     month = [str("MONTH_" + str(x+1)) for x in range(12)]
     df["MONTH"] = df.index.month
     df.MONTH = df.MONTH.astype('category')
