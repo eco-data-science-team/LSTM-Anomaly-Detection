@@ -5,78 +5,100 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-
+import warnings
+warnings.filterwarnings('ignore')
 from keras.models import model_from_json
 from sklearn.preprocessing import MinMaxScaler
+
+from data_helper import *
+
 config = configparser.ConfigParser()
-config.read('config/predictorconfig.ini')
+config.read('config/mypredictorconfig.ini')
 
 eco_tools_path = config['SETUP']['eco_tools_path']
 sys.path.append(eco_tools_path)
 from ecotools.pi_client import pi_client
+pc = pi_client(root = 'readonly')
+point_name = config['PI']['point_name']
+start = config['PI']['start']
+end = config['PI']['end']
+interval = config['PI']['interval']
+calculation = config['PI']['calculation']
 
 # Model reconstruction from JSON file
 weight_name = config['infiles']['weight_name']
 arch_name = config['infiles']['arch_name']
+fig_name = config['outfiles']['fig_name']
 with open(arch_name, 'r') as f:
     model = model_from_json(f.read())
 
 # Load weights into the new model
 model.load_weights(weight_name)
 
+look_back = int(config['MODEL']['look_back'])
+anomaly_threshold = int(config['MODEL']['anomaly_threshold'])
 
-import warnings
-warnings.filterwarnings('ignore')
-scaler = MinMaxScaler(feature_range=(0,1))
+point_list = [point_name, 'aiTIT4045']
+df = pc.get_stream_by_point(point_list, 
+start = start, end = end, calculation = calculation, interval= interval)
 
-pc = pi_client(root = 'readonly')
+df = create_standard_multivariable_df(df)
 
+scaler = MinMaxScaler(feature_range = (0,1))
+def prep_prediction_data(df):
+    y = df[point_name]
+    X = df.drop(columns = point_name)
+    X_ = scaler.fit_transform(X)
+    y_ = scaler.fit_transform(np.array(y). reshape((-1,1)))
+    X_ = np.reshape(X_, (X_.shape[0], 1 , X_.shape[1]))
+    
+    return X_, y_
 
-point_name = config['PI']['point_name']
+X, y = prep_prediction_data(df)
+prediction =  model.predict(X)
+prediction = scaler.inverse_transform(prediction.reshape(-1, 1))
 
-def create_dataset(dataset, look_back = 1):
-    dataX, dataY = [], []
-    for i in range(len(dataset) - look_back - 1):
-        a = dataset[i: (i + look_back), 0]
-        dataX.append(a)
-        dataY.append(dataset[i + look_back, 0])
+index = df.index
 
-    return np.array(dataX), np.array(dataY)
+result = pd.DataFrame({"Actual":scaler.inverse_transform(y).reshape((-1,)),"Modeled":prediction.reshape((-1,))}, index=index)
 
-def predict_and_transform(trainX):
-    prediction = model.predict(trainX)
-    return scaler.inverse_transform(prediction.reshape(-1,1))
+result.eval('Difference = (Actual - Modeled)/ Modeled * 100', inplace=True)
 
-def get_error(df):
-    df['Error_Per'] = abs((df['Actual'] - df['Predicted']))/df['Actual'] * 100
-    df['Error_Per'] = df['Error_Per'].replace(np.inf, 100)
-    return df
+result["Difference"] = result['Difference'].abs().round(decimals = 2)                                 
 
+actual = result['Actual'].tolist()
+modeled = result['Modeled'].tolist()
+difference = result['Difference'].tolist()
+idx = result.index.tolist()
+ymax = max(max(actual, modeled))
+ymin = min(min(actual, modeled))
 
-def prep_df(df):
-    df = df.dropna(how='any')
-    dataset = df.values
-    dataset = dataset.astype('float64')
-    dataset = scaler.fit_transform(dataset)
-    trainX, trainY = create_dataset(dataset, look_back = 3)
-    trainX = np.reshape(trainX, (trainX.shape[0],1,  trainX.shape[1]))
-    actual = scaler.inverse_transform(trainY.reshape(-1,1))
-    prediction = predict_and_transform(trainX)
-    actual = actual.reshape((-1,))
-    prediction = prediction.reshape((-1,))
-    df = pd.DataFrame({'Predicted': prediction, 'Actual': actual}, 
-                    index = df.index[-len(prediction)-1:-1], 
-                    columns =["Predicted", "Actual"])
-    df = get_error(df)
+plt.figure(figsize=(18,10))
+count = 1
+for ii in range(len(actual)):
+    
+    if difference[ii] > anomaly_threshold:
+        if count%2 == 0:
+            plt.text(idx[ii] , ymin*0.99, int(difference[ii]), size = 11)
+            count = count +1
+        else:
+            plt.text(idx[ii] , ymin*1.00, int(difference[ii]), size = 11)
+            count = count +1
+        plt.axvline(x = idx[ii], color = 'r', linestyle = '--')
+plt.plot(idx, actual, marker = ".", color="#5bc0de", label = 'Actual')
+plt.plot(idx, modeled, marker = ".", color="#E8743B", label = "Modeled")
 
-    return df
+plt.ylim([ymin*0.985, ymax*1.01])
+plt.fill_between(idx, actual, modeled, color = "grey", alpha = "0.3")
+plt.yticks(actual, size= 10)
+plt.xticks(idx, size = 10)
 
-
-
-
-
-df = pc.get_stream_by_point(point_name, end = '*')
-
-df = prep_df(df)
-
-print(df.tail())
+plt.locator_params(axis = 'y', tight = True, nbins=6)
+plt.locator_params(axis = 'x', nbins = 6)
+biggest_difference = result.loc[result['Difference'] == max(difference)]['Difference'][0]
+at_time = result.loc[result['Difference'] == max(difference)].index[0]
+plt.suptitle(f"{point_name}\n Actual vs Modeled", fontsize = 16)
+plt.title(f"Threshold: {anomaly_threshold}%\n Biggest Difference:{int(biggest_difference)}% on {at_time}")
+plt.legend()
+plt.savefig(fig_name)
+#plt.show()
