@@ -1,6 +1,6 @@
 import pandas as pd
 
-def create_standard_multivariable_df(df, point_location = 0, shift = 1, rename_OAT = True):
+def create_standard_multivariable_df(df, point_location = 0, shift = 1, rename_OAT = True, dropna = True):
     #this function creates a standard 50 variable DataFrame
     """
     variables generated:
@@ -61,7 +61,8 @@ def create_standard_multivariable_df(df, point_location = 0, shift = 1, rename_O
 
     df = pd.concat([df, month_df, tod_df, dow_df], axis = 1)
     df.drop(['MONTH', 'TOD', 'DOW'], axis = 1, inplace = True)
-    df.dropna(inplace = True)
+    if dropna:
+        df.dropna(inplace = True)
 
     del month_df
     del tod_df
