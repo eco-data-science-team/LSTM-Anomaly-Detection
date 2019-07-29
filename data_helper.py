@@ -67,7 +67,7 @@ def create_standard_multivariable_df(df, point_location = 0, shift = 1, rename_O
     del month_df
     del tod_df
     del dow_df
-    print(f'Generated: {len(df.columns) - start_col} columns')
+    #print(f'Generated: {len(df.columns) - start_col} columns')
     return df
 
 
