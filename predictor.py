@@ -42,7 +42,7 @@ point_list = [point_name, 'aiTIT4045']
 df = pc.get_stream_by_point(point_list, 
 start = start, end = end, calculation = calculation, interval= interval)
 
-df = create_standard_multivariable_df(df)
+df = create_standard_multivariable_df(df, shift= look_back)
 
 scaler = MinMaxScaler(feature_range = (0,1))
 def prep_prediction_data(df):

@@ -42,6 +42,7 @@ validation_percent = 1.0 - train_percent
 n_jobs = int(config['model']['n_jobs'])
 epochs = int(config['model']['epochs'])
 neurons = int(config['model']['neurons'])
+look_back = int(config['model']['look_back'])
 print("Loaded variables from config file...\n")
 print(f"Using: {round(train_percent *100, 2)} % for training...")
 print(f"Using: {round(validation_percent *100, 2)} % for validating...")
@@ -52,7 +53,7 @@ print(f"2 hidden layers with {neurons} neurons...")
 fig_name = config['outfiles']['fig_name']
 weight_name = config['outfiles']['weight_name']
 arch_name = config['outfiles']['arch_name']
-show_every = config['outfiles']['show_every']
+show_every = int(config['outfiles']['show_every'])
 
 point_list = [point_name, 'aiTIT4045']
 df = pc.get_stream_by_point(point_list, start = start, end = end, calculation = calculation, interval= interval)
@@ -60,7 +61,7 @@ df = df.dropna(how='any')
 
 
 df =  clean_train_data(df, eval_expression=["df.loc[df['GBSF_Electricity_Demand_kBtu'] > 2400]"])
-df = create_standard_multivariable_df(df)
+df = create_standard_multivariable_df(df, shift = look_back)
 
 
 def scale_keras(X, y):

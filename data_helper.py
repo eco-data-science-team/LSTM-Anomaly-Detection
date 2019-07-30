@@ -20,13 +20,18 @@ def create_standard_multivariable_df(df, point_location = 0, shift = 1, rename_O
     
     if rename_OAT:
         df.rename(columns={'aiTIT4045':'OAT'}, inplace=True)
-    start_col = len(df.columns)
+    #start_col = len(df.columns)
     df["CDD"] = df.OAT - 65.0
-    df.loc[df.CDD < 0 , "CDD"] = 0
+    df.loc[df.CDD < 0 , "CDD"] = 0.0
     df["HDD"] = 65.0 - df.OAT
-    df.loc[df.HDD < 0, "HDD" ] = 0
+    df.loc[df.HDD < 0, "HDD" ] = 0.0
     df["CDD2"] = df.CDD ** 2
     df["HDD2"] = df.HDD ** 2
+    df.OAT = df.OAT.round(0)
+    df.CDD = df.CDD.round(0)
+    df.HDD = df.HDD.round(0)
+    df.CDD2 = df.CDD2.round(0)
+    df.HDD2 = df.HDD2.round(0)
     
     month = [str("MONTH_" + str(x+1)) for x in range(12)]
     df["MONTH"] = df.index.month
@@ -52,8 +57,9 @@ def create_standard_multivariable_df(df, point_location = 0, shift = 1, rename_O
     df["WEEKEND"] = 0
     df.loc[(dow_df.DOW_5 == 1) | (dow_df.DOW_6 == 1), 'WEEKEND'] = 1
 
-    shift_col = "SHIFT_" + str(shift)
-    df[shift_col] = df.iloc[ : , point_location].shift(shift)
+    for i in range(shift):
+        shift_col = "SHIFT_" + str(i+1)
+        df[shift_col] = df.iloc[ : , point_location].shift(i+1)
 
     df["Rolling24_mean"] = df.iloc[ : , point_location].rolling("24h").mean()
     df["Rolling24_max"] = df.iloc[ : , point_location].rolling("24h").max()

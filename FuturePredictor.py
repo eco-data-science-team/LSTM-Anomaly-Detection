@@ -25,6 +25,7 @@ start = config['PI']['start']
 end = config['PI']['end']
 interval = config['PI']['interval']
 calculation = config['PI']['calculation']
+forecaster = config['PI']['forecaster']
 
 look_back = int(config['MODEL']['look_back'])
 anomaly_threshold = int(config['MODEL']['anomaly_threshold'])
@@ -32,7 +33,7 @@ forecast = config['MODEL']['forecast']
 
 point_list = [point_name, 'aiTIT4045']
 df = pc.get_stream_by_point(point_list, start = start, end = end, calculation = calculation, interval= interval)
-df1 = pc.get_stream_by_point('Future_TMY', end = forecast, interval = interval, calculation = calculation)
+df1 = pc.get_stream_by_point(forecaster, end = forecast, interval = interval, calculation = calculation)
 new_df = pd.concat([df,df1], axis = 1, sort = False)
 
 
@@ -48,9 +49,9 @@ model.load_weights(weight_name)
 
 del df, df1
 #we fill the null values for outside air temp with Future TMY data
-# then we drop the Future_TMY column as it is not needed anymore
-new_df['aiTIT4045'].fillna(new_df.Future_TMY, inplace = True)
-new_df.drop('Future_TMY', axis = 1, inplace = True)
+# then we drop the Outside_Air_Temp_Forecast column as it is not needed anymore
+new_df['aiTIT4045'].fillna(new_df[forecaster], inplace = True)
+new_df.drop(forecaster, axis = 1, inplace = True)
 
 values_to_predict = new_df.loc[new_df[point_name].isna()].shape[0]
 print(f"Values to Predict: {values_to_predict}")
@@ -91,4 +92,8 @@ for i in range(values_to_predict):
 new_df[point_name].plot(figsize = (20,10))
 new_df[point_name].iloc[firstNaN:].plot(figsize = (20,10), color = 'r')
 plt.axvline(x = new_df.iloc[firstNaN].name, color = 'green', linestyle = '--')
-plt.title(f"Predicting {forecast}", fontsize = 20)
+plt.suptitle(f"{point_name}\n", fontsize = 24)
+plt.title(f"Predicting {forecast} using {forecaster}", fontsize = 20)
+plt.savefig(f'Future_predicted_{forecaster}.png')
+
+new_df.to_csv(f'{forecaster}_saved_predictions_{firstNaN}.csv')
