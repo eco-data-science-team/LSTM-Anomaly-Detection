@@ -44,16 +44,26 @@ start = start, end = end, calculation = calculation, interval= interval)
 
 point_list = [point_name, 'aiTIT4045','Future_TMY','Outside_Air_Temp_Forecast']
 df = pc.get_stream_by_point(point_list, start = start, end = end, calculation = calculation, interval= interval)
+#Filling aiTIT4045  NaN values with OAt Forecast first (a little more accurate) and then 
+# any remaining NaN values get filled with Future_TMY
 df['aiTIT4045'].fillna(df['Outside_Air_Temp_Forecast'], inplace = True)
 df['aiTIT4045'].fillna(df['Future_TMY'], inplace = True)
+
+#Any point that does not change form one value to the next will get replaced with NaN
 df.loc[(df['aiTIT4045'].pct_change() == 0.0 ), 'aiTIT4045'] = np.nan
+
+#Once again any NaN values will get replaced with better data
 df['aiTIT4045'].fillna(df['Outside_Air_Temp_Forecast'], inplace = True)
 df['aiTIT4045'].fillna(df['Future_TMY'], inplace = True)
+
+#Drop the columns that were used to fill the values for aiTIT4045
 df.drop(['Outside_Air_Temp_Forecast','Future_TMY'], axis = 1, inplace = True)
+
 start = df.shape[0]
 df = df.dropna(how='any')
 print(f"Removed: {start - df.shape[0]} rows")
 
+#Calling data_helper's function to generate the multivariable dataframe
 df = create_standard_multivariable_df(df, shift= look_back)
 
 scaler = MinMaxScaler(feature_range = (0,1))
