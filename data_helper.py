@@ -61,9 +61,9 @@ def create_standard_multivariable_df(df, point_location = 0, shift = 1, rename_O
         shift_col = "SHIFT_" + str(i+1)
         df[shift_col] = df.iloc[ : , point_location].shift(i+1)
 
-    df["Rolling24_mean"] = df.iloc[ : , point_location].rolling("24h").mean()
-    df["Rolling24_max"] = df.iloc[ : , point_location].rolling("24h").max()
-    df["Rolling24_min"] = df.iloc[ : , point_location].rolling("24h").min()
+    # df["Rolling24_mean"] = df.iloc[ : , point_location].rolling("24h").mean()
+    # df["Rolling24_max"] = df.iloc[ : , point_location].rolling("24h").max()
+    # df["Rolling24_min"] = df.iloc[ : , point_location].rolling("24h").min()
 
     df = pd.concat([df, month_df, tod_df, dow_df], axis = 1)
     df.drop(['MONTH', 'TOD', 'DOW'], axis = 1, inplace = True)

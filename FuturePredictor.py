@@ -33,6 +33,11 @@ forecast = config['MODEL']['forecast']
 
 point_list = [point_name, 'aiTIT4045']
 df = pc.get_stream_by_point(point_list, start = start, end = end, calculation = calculation, interval= interval)
+#initial_shape = df.shape[0]
+#df = df.loc[~(df['aiTIT4045'].pct_change() == 0.0 )]
+#df = df.loc[~(df[point_name].pct_change() == 0.0 )]
+#final_shape = df.shape[0]
+#print(f"Cutting {initial_shape -final_shape} rows of stale values....")
 df1 = pc.get_stream_by_point(forecaster, end = forecast, interval = interval, calculation = calculation)
 new_df = pd.concat([df,df1], axis = 1, sort = False)
 
@@ -78,7 +83,7 @@ for i in range(values_to_predict):
     #of point interested in as NaN
     df = new_df.iloc[ :nan_index + 1]#.tail(15)
     df = create_standard_multivariable_df(df, shift = look_back, dropna = False)
-
+    #print(f"Rolling 24h mean: {df.Rolling24_mean.tail(2)}")
     #drop all NaN values except the very last one as this is the 
     #one we are interested in predicting then append that last row
     #from df onto ddf

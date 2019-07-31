@@ -55,10 +55,17 @@ weight_name = config['outfiles']['weight_name']
 arch_name = config['outfiles']['arch_name']
 show_every = int(config['outfiles']['show_every'])
 
-point_list = [point_name, 'aiTIT4045']
+point_list = [point_name, 'aiTIT4045','Future_TMY','Outside_Air_Temp_Forecast']
 df = pc.get_stream_by_point(point_list, start = start, end = end, calculation = calculation, interval= interval)
+df['aiTIT4045'].fillna(df['Outside_Air_Temp_Forecast'], inplace = True)
+df['aiTIT4045'].fillna(df['Future_TMY'], inplace = True)
+df.loc[(df['aiTIT4045'].pct_change() == 0.0 ), 'aiTIT4045'] = np.nan
+df['aiTIT4045'].fillna(df['Outside_Air_Temp_Forecast'], inplace = True)
+df['aiTIT4045'].fillna(df['Future_TMY'], inplace = True)
+df.drop(['Outside_Air_Temp_Forecast','Future_TMY'], axis = 1, inplace = True)
+start = df.shape[0]
 df = df.dropna(how='any')
-
+print(f"Removed: {start - df.shape[0]} rows")
 
 df =  clean_train_data(df, eval_expression=["df.loc[df['GBSF_Electricity_Demand_kBtu'] > 2400]"])
 df = create_standard_multivariable_df(df, shift = look_back)
